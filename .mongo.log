@@ -1,0 +1,5 @@
+
+> pillars-turf@0.1.0 db:local
+> node scripts/local-mongo.mjs
+
+MongoDB running at mongodb://127.0.0.1:27017/ (data in .mongo-data). Press Ctrl+C to stop.
