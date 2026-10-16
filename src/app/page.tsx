@@ -1,65 +1,81 @@
 import Link from "next/link";
+import { FeaturedTournament } from "@/components/home/FeaturedTournament";
+import { HomeHero } from "@/components/home/HomeHero";
 import { PitchInfo } from "@/components/PitchInfo";
-import { getSiteInfo, listTournaments } from "@/lib/data";
+import { getPublicBundle, getSiteInfo, listTournaments } from "@/lib/data";
 import { fmtDate } from "@/lib/format";
+import { nextSession } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
-function statusOf(t: { matchCount: number; playedCount: number }) {
-  if (!t.matchCount || !t.playedCount) return { label: "Upcoming", cls: "" };
-  if (t.playedCount === t.matchCount) return { label: "Completed", cls: "" };
-  return { label: "In progress", cls: "top" };
+type Listed = Awaited<ReturnType<typeof listTournaments>>[number];
+
+function statusOf(t: Listed) {
+  if (!t.matchCount || !t.playedCount) return { label: "Upcoming", cls: "", rank: 1 };
+  if (t.playedCount === t.matchCount) return { label: "Completed", cls: "", rank: 2 };
+  return { label: "In progress", cls: "top", rank: 0 };
+}
+
+function dateRange(t: Listed) {
+  if (!t.firstDate) return "Dates to be announced";
+  if (t.firstDate === t.lastDate) return fmtDate(t.firstDate, { day: "numeric", month: "long" });
+  return `${fmtDate(t.firstDate, { day: "numeric", month: "short" })} – ${fmtDate(t.lastDate, { day: "numeric", month: "short" })}`;
 }
 
 export default async function Home() {
   const [tournaments, site] = await Promise.all([listTournaments(), getSiteInfo()]);
+  // feature what's in progress, otherwise what's coming up, otherwise the most recent
+  const pick = [...tournaments].sort((a, b) => statusOf(a).rank - statusOf(b).rank || b.year - a.year)[0];
+  const featured = pick ? await getPublicBundle(pick.slug) : null;
   const years = [...new Set(tournaments.map((t) => t.year))];
 
   return (
     <>
-      <header className="band">
-        <div className="wrap py-12">
-          <div className="eyebrow">Football pitch · Tournaments</div>
-          <h1 className="display mt-2 text-[clamp(52px,11vw,104px)]">Pillars Turf</h1>
-          <p className="mt-3 max-w-xl opacity-85">Weekly games, plus league tables, fixtures, results and awards from every tournament played here.</p>
-          <a href="#rules" className="chip mt-5 inline-block">Sessions and pitch rules</a>
-        </div>
-      </header>
+      <HomeHero next={nextSession(site.sessions)} site={site} featured={pick ?? null} />
 
-      <main className="wrap grid gap-8 py-8 pb-16">
-        <h2 className="h2 !mb-0">Tournaments</h2>
-        {tournaments.length === 0 && <div className="card empty">No tournaments yet. Check back soon.</div>}
-        {years.map((y) => (
-          <section key={y}>
-            <h3 className="mb-2.5 font-num text-base font-bold tracking-widest text-[var(--muted)]">{y}</h3>
-            <div className="grid-cards">
-              {tournaments.filter((t) => t.year === y).map((t) => {
-                const s = statusOf(t);
-                const dates = t.firstDate
-                  ? t.firstDate === t.lastDate ? fmtDate(t.firstDate, { day: "numeric", month: "long" })
-                    : `${fmtDate(t.firstDate, { day: "numeric", month: "short" })} – ${fmtDate(t.lastDate, { day: "numeric", month: "short" })}`
-                  : "Dates to be announced";
-                return (
-                  <Link key={t._id} href={`/${t.slug}`} className="board block transition-colors hover:border-[var(--muted)]">
-                    <div className="band px-4 py-5">
-                      <div className="relative z-[1] flex items-start justify-between gap-3">
-                        <div className="display text-[34px] leading-none">{t.name}</div>
+      <main className="wrap grid gap-14 py-10 pb-16">
+        {featured && <FeaturedTournament b={featured} />}
+
+        <section className="grid gap-4">
+          <div>
+            <div className="atitle">Archive</div>
+            <h2 className="display mt-1 text-[clamp(32px,5vw,48px)]">All tournaments</h2>
+          </div>
+          {tournaments.length === 0 && <div className="card empty">No tournaments yet. Check back soon.</div>}
+          {years.map((y) => (
+            <div key={y} className="grid gap-3">
+              <h3 className="font-num text-base font-bold tracking-widest text-[var(--muted)]">{y}</h3>
+              <div className="grid-cards">
+                {tournaments.filter((t) => t.year === y).map((t) => {
+                  const s = statusOf(t);
+                  return (
+                    <Link key={t._id} href={`/${t.slug}`} className="card grid gap-3 transition-colors hover:border-[var(--muted)]">
+                      <div className="flex items-start justify-between gap-3">
+                        <b className="text-lg leading-tight">{t.name}</b>
                         <span className={`place ${s.cls}`}>{s.label}</span>
                       </div>
-                    </div>
-                    <div className="grid gap-1 p-4">
-                      <div className="font-semibold">{dates}</div>
-                      <div className="hint tnum">{t.teamCount} teams · {t.playedCount}/{t.matchCount} matches played</div>
-                      {t.tagline && <div className="hint">{t.tagline}</div>}
-                    </div>
-                  </Link>
-                );
-              })}
+                      <div className="text-sm">{dateRange(t)} · {t.teamCount} teams</div>
+                      <div className="grid gap-1">
+                        <div className="progress"><span style={{ width: `${t.matchCount ? (t.playedCount / t.matchCount) * 100 : 0}%` }} /></div>
+                        <div className="hint tnum">{t.playedCount} of {t.matchCount} matches played</div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          </section>
-        ))}
+          ))}
+        </section>
+
         <PitchInfo info={site} />
       </main>
+
+      <footer className="foot">
+        <div className="wrap flex flex-wrap items-center justify-between gap-2 py-6 text-sm text-[var(--muted)]">
+          <span className="display text-xl text-[var(--ink)]">Pillars Turf</span>
+          <span>The referee&apos;s decision is final.</span>
+        </div>
+      </footer>
     </>
   );
 }
