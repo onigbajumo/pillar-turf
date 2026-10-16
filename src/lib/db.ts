@@ -1,4 +1,11 @@
+import dns from "node:dns";
 import mongoose from "mongoose";
+
+// Local development on some Windows networks can't resolve mongodb+srv:// addresses
+// (querySrv ECONNREFUSED); public DNS can. Hosted servers like Vercel don't need this.
+if (process.env.NODE_ENV !== "production" && process.env.MONGODB_URI?.startsWith("mongodb+srv://")) {
+  dns.setServers(["1.1.1.1", "8.8.8.8", ...dns.getServers()]);
+}
 
 type Cache = { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null };
 const g = globalThis as unknown as { _mongoose?: Cache };

@@ -10,6 +10,7 @@ export function AdminShell({ admin, children }: { admin: CurrentAdmin; children:
   const router = useRouter();
   const nav = [
     { href: "/admin", label: "Tournaments", active: path === "/admin" || path.startsWith("/admin/t/") },
+    { href: "/admin/pitch", label: "Pitch info", active: path.startsWith("/admin/pitch") },
     { href: "/admin/users", label: "Admins", active: path.startsWith("/admin/users") },
     { href: "/admin/account", label: "My account", active: path.startsWith("/admin/account") },
   ];

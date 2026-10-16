@@ -87,8 +87,16 @@ body { font-family: var(--font-body), system-ui, sans-serif; font-size: 15px; li
 .score { font-family: var(--font-num), sans-serif; font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; min-width: 68px; text-align: center; padding: 2px 8px; border-radius: 6px; background: var(--surface-2); }
 .score.vs { font-size: 13px; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
 .mmeta { grid-column: 1 / -1; font-size: 12px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
-.scorers { font-size: 12.5px; color: var(--muted); min-width: 0; }
-.scorers.r { text-align: right; grid-column: 3; }
+.events { display: grid; gap: 3px; font-size: 12.5px; color: var(--muted); min-width: 0; }
+.events li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.events li > span:last-child { overflow-wrap: anywhere; }
+.events.r li { flex-direction: row-reverse; text-align: right; }
+.mk-goal { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); box-shadow: inset 0 0 0 2px var(--surface), 0 0 0 1px var(--ink); }
+.mk-assist { flex: none; font-family: var(--font-num), sans-serif; font-weight: 700; font-size: 10px; line-height: 12px; padding: 0 3px; border: 1px solid var(--muted); border-radius: 3px; color: var(--ink); }
+.mk-card { flex: none; width: 9px; height: 12px; border-radius: 2px; }
+.mk-card.y { background: #f2c200; }
+.mk-card.r { background: #d62d20; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .round-h { padding: 9px 14px; background: var(--surface-2); font-family: var(--font-num), sans-serif; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
 .round-h:first-child { border-top: 0; }
 .round-h b { color: var(--ink); }

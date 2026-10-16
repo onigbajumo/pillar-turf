@@ -1,9 +1,7 @@
 // Creates (or resets) an admin account.
 //   npm run admin:create -- --email you@example.com --name "Your Name" [--password "..."] [--role owner|admin]
 // The first account created is always an owner. If --password is left out you'll be asked for it.
-import { config } from "dotenv";
-config({ path: ".env.local" });
-config();
+import "./env";
 
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { listTournaments } from "@/lib/data";
+import { PitchInfo } from "@/components/PitchInfo";
+import { getSiteInfo, listTournaments } from "@/lib/data";
 import { fmtDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -11,24 +12,26 @@ function statusOf(t: { matchCount: number; playedCount: number }) {
 }
 
 export default async function Home() {
-  const tournaments = await listTournaments();
+  const [tournaments, site] = await Promise.all([listTournaments(), getSiteInfo()]);
   const years = [...new Set(tournaments.map((t) => t.year))];
 
   return (
     <>
       <header className="band">
         <div className="wrap py-12">
-          <div className="eyebrow">Tournaments</div>
+          <div className="eyebrow">Football pitch · Tournaments</div>
           <h1 className="display mt-2 text-[clamp(52px,11vw,104px)]">Pillars Turf</h1>
-          <p className="mt-3 max-w-xl opacity-85">League tables, fixtures, results, team photos and awards from every tournament played at Pillars Turf.</p>
+          <p className="mt-3 max-w-xl opacity-85">Weekly games, plus league tables, fixtures, results and awards from every tournament played here.</p>
+          <a href="#rules" className="chip mt-5 inline-block">Sessions and pitch rules</a>
         </div>
       </header>
 
       <main className="wrap grid gap-8 py-8 pb-16">
+        <h2 className="h2 !mb-0">Tournaments</h2>
         {tournaments.length === 0 && <div className="card empty">No tournaments yet. Check back soon.</div>}
         {years.map((y) => (
           <section key={y}>
-            <h2 className="h2">{y}</h2>
+            <h3 className="mb-2.5 font-num text-base font-bold tracking-widest text-[var(--muted)]">{y}</h3>
             <div className="grid-cards">
               {tournaments.filter((t) => t.year === y).map((t) => {
                 const s = statusOf(t);
@@ -55,6 +58,7 @@ export default async function Home() {
             </div>
           </section>
         ))}
+        <PitchInfo info={site} />
       </main>
     </>
   );

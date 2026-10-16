@@ -56,6 +56,7 @@ const teamSchema = new Schema(
 
 /* ---------- Matches ---------- */
 const scorerSchema = new Schema({ name: { type: String, required: true }, goals: { type: Number, default: 1 } }, { _id: false });
+const tallySchema = new Schema({ name: { type: String, required: true }, count: { type: Number, default: 1 } }, { _id: false });
 
 const matchSchema = new Schema(
   {
@@ -71,6 +72,12 @@ const matchSchema = new Schema(
     awayScore: { type: Number, default: null },
     homeScorers: { type: [scorerSchema], default: [] },
     awayScorers: { type: [scorerSchema], default: [] },
+    homeAssists: { type: [tallySchema], default: [] },
+    awayAssists: { type: [tallySchema], default: [] },
+    homeYellows: { type: [tallySchema], default: [] },
+    awayYellows: { type: [tallySchema], default: [] },
+    homeReds: { type: [tallySchema], default: [] },
+    awayReds: { type: [tallySchema], default: [] },
   },
   { timestamps: true },
 );
@@ -94,6 +101,12 @@ const awardSchema = new Schema(
 );
 awardSchema.index({ tournament: 1, key: 1 }, { unique: true });
 
+/* ---------- Site settings (one document, key "site") ---------- */
+const settingSchema = new Schema(
+  { key: { type: String, required: true, unique: true }, value: { type: Schema.Types.Mixed, default: {} } },
+  { timestamps: true, minimize: false },
+);
+
 export type AdminUserDoc = InferSchemaType<typeof adminUserSchema> & { _id: mongoose.Types.ObjectId };
 export type TournamentDoc = InferSchemaType<typeof tournamentSchema> & { _id: mongoose.Types.ObjectId };
 
@@ -101,4 +114,5 @@ export const AdminUser = (models.AdminUser as Model<InferSchemaType<typeof admin
 export const Tournament = (models.Tournament as Model<InferSchemaType<typeof tournamentSchema>>) || model("Tournament", tournamentSchema);
 export const Team = (models.Team as Model<InferSchemaType<typeof teamSchema>>) || model("Team", teamSchema);
 export const Match = (models.Match as Model<InferSchemaType<typeof matchSchema>>) || model("Match", matchSchema);
+export const Setting = (models.Setting as Model<InferSchemaType<typeof settingSchema>>) || model("Setting", settingSchema);
 export const Award = (models.Award as Model<InferSchemaType<typeof awardSchema>>) || model("Award", awardSchema);

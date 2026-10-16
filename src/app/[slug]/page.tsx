@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { LeagueTable, ScorersTable } from "@/components/LeagueTable";
+import { AssistsTable, LeagueTable, ScorersTable } from "@/components/LeagueTable";
 import { MatchRow } from "@/components/MatchRow";
 import { getPublicBundle } from "@/lib/data";
-import { byOrder, scorers, standings } from "@/lib/league";
+import { assisters, byOrder, scorers, standings } from "@/lib/league";
 
 export default async function TablePage({ params }: { params: Promise<{ slug: string }> }) {
   const b = await getPublicBundle((await params).slug);
@@ -40,10 +40,16 @@ export default async function TablePage({ params }: { params: Promise<{ slug: st
         </section>
       </div>
 
-      <section>
-        <h2 className="h2">Golden Boot race <small>Top scorers</small></h2>
-        <ScorersTable rows={scorers(matches)} teams={teams} limit={5} />
-      </section>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="min-w-0">
+          <h2 className="h2">Golden Boot race <small>Top scorers</small></h2>
+          <ScorersTable rows={scorers(matches)} teams={teams} limit={5} />
+        </section>
+        <section className="min-w-0">
+          <h2 className="h2">Playmaker race <small>Top assists</small></h2>
+          <AssistsTable rows={assisters(matches)} teams={teams} limit={5} />
+        </section>
+      </div>
     </>
   );
 }

@@ -1,9 +1,7 @@
 // Loads the 2026 Pillars Turf Cup: 8 teams and the 28 fixtures for Saturday 17 and Saturday 24 October.
 //   npm run seed:2026            (skips if it already exists)
 //   npm run seed:2026 -- --force (deletes and recreates it, including results)
-import { config } from "dotenv";
-config({ path: ".env.local" });
-config();
+import "./env";
 
 import mongoose from "mongoose";
 import { connectDB } from "../src/lib/db";

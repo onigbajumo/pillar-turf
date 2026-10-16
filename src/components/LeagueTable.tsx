@@ -1,4 +1,4 @@
-import type { Row, ScorerRow, TeamT } from "@/lib/league";
+import { FAIR_PLAY, type AssistRow, type CardRow, type Row, type ScorerRow, type TeamCardRow, type TeamT } from "@/lib/league";
 import { Crest } from "./Crest";
 
 export function LeagueTable({ rows, points }: { rows: Row[]; points: { win: number; draw: number; loss: number } }) {
@@ -46,18 +46,21 @@ export function LeagueTable({ rows, points }: { rows: Row[]; points: { win: numb
   );
 }
 
-export function ScorersTable({ rows, teams, limit }: { rows: ScorerRow[]; teams: TeamT[]; limit?: number }) {
-  if (!rows.length) return <div className="board"><div className="empty">No goalscorers recorded yet.</div></div>;
+/** Ranked player leaderboard (goals or assists). Players level on the value share a rank. */
+function PlayerTable({ rows, teams, limit, valueLabel, empty, label }: {
+  rows: { name: string; team: string; value: number; games: number }[]; teams: TeamT[]; limit?: number; valueLabel: string; empty: string; label: string;
+}) {
+  if (!rows.length) return <div className="board"><div className="empty">{empty}</div></div>;
   const byId = new Map(teams.map((t) => [t._id, t]));
   let rank = 0, prev: number | null = null;
   return (
     <div className="board">
       <div className="scroll">
-        <table className="lt" aria-label="Top scorers">
-          <thead><tr><th>#</th><th className="team">Player</th><th className="team">Team</th><th>Games</th><th className="pts">Goals</th></tr></thead>
+        <table className="lt" aria-label={label}>
+          <thead><tr><th>#</th><th className="team">Player</th><th className="team">Team</th><th>Games</th><th className="pts">{valueLabel}</th></tr></thead>
           <tbody>
             {rows.slice(0, limit).map((r, i) => {
-              if (r.goals !== prev) { rank = i + 1; prev = r.goals; }
+              if (r.value !== prev) { rank = i + 1; prev = r.value; }
               const t = byId.get(r.team);
               return (
                 <tr key={r.name + r.team}>
@@ -65,13 +68,75 @@ export function ScorersTable({ rows, teams, limit }: { rows: ScorerRow[]; teams:
                   <td className="team"><div className="flex items-center gap-2"><Crest team={t} size="sm" /><span>{r.name}</span></div></td>
                   <td className="sub">{t?.name ?? "Removed team"}</td>
                   <td>{r.games}</td>
-                  <td className="pts">{r.goals}</td>
+                  <td className="pts">{r.value}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+export function ScorersTable({ rows, teams, limit }: { rows: ScorerRow[]; teams: TeamT[]; limit?: number }) {
+  return <PlayerTable rows={rows.map((r) => ({ ...r, value: r.goals }))} teams={teams} limit={limit} valueLabel="Goals" label="Top scorers" empty="No goalscorers recorded yet." />;
+}
+
+export function AssistsTable({ rows, teams, limit }: { rows: AssistRow[]; teams: TeamT[]; limit?: number }) {
+  return <PlayerTable rows={rows.map((r) => ({ ...r, value: r.assists }))} teams={teams} limit={limit} valueLabel="Assists" label="Top assists" empty="No assists recorded yet." />;
+}
+
+export function CardsTable({ rows, teams }: { rows: CardRow[]; teams: TeamT[] }) {
+  if (!rows.length) return <div className="board"><div className="empty">No cards shown yet.</div></div>;
+  const byId = new Map(teams.map((t) => [t._id, t]));
+  return (
+    <div className="board">
+      <div className="scroll">
+        <table className="lt" aria-label="Cards by player">
+          <thead><tr><th className="team">Player</th><th className="team">Team</th><th><span className="mk-card y inline-block align-middle" /> Yellow</th><th><span className="mk-card r inline-block align-middle" /> Red</th></tr></thead>
+          <tbody>
+            {rows.map((r) => {
+              const t = byId.get(r.team);
+              return (
+                <tr key={r.name + r.team}>
+                  <td className="team"><div className="flex items-center gap-2"><Crest team={t} size="sm" /><span>{r.name}</span></div></td>
+                  <td className="sub">{t?.name ?? "Removed team"}</td>
+                  <td>{r.yellow || "–"}</td>
+                  <td>{r.red || "–"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export function FairPlayTable({ rows, teams }: { rows: TeamCardRow[]; teams: TeamT[] }) {
+  const byId = new Map(teams.map((t) => [t._id, t]));
+  return (
+    <div className="board">
+      <div className="scroll">
+        <table className="lt" aria-label="Fair play table">
+          <thead><tr><th>Pos</th><th className="team">Team</th><th>P</th><th>Yellow</th><th>Red</th><th className="pts">Pts</th></tr></thead>
+          <tbody>
+            {rows.map((r, i) => {
+              const t = byId.get(r.team);
+              return (
+                <tr key={r.team}>
+                  <td className="pos">{i + 1}</td>
+                  <td className="team"><div className="flex items-center gap-2"><Crest team={t} size="sm" /><span>{t?.name ?? "Removed team"}</span></div></td>
+                  <td>{r.played}</td><td>{r.yellow}</td><td>{r.red}</td>
+                  <td className="pts">{r.points}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="legend"><span>Yellow card {FAIR_PLAY.yellow} pt · Red card {FAIR_PLAY.red} pts</span><span>Fewest points wins the Fair Play Award</span></div>
     </div>
   );
 }

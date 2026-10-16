@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { AwardCard } from "@/components/AwardCard";
-import { ScorersTable } from "@/components/LeagueTable";
+import { AssistsTable, CardsTable, FairPlayTable, ScorersTable } from "@/components/LeagueTable";
 import { getPublicBundle } from "@/lib/data";
 import { fmtDate } from "@/lib/format";
-import { TOURNAMENT_SLOTS, autoWinner, matchdaySlots, roundDate, rounds, scorers, standings } from "@/lib/league";
+import { TOURNAMENT_SLOTS, autoWinner, matchdaySlots, roundDate, rounds, stats } from "@/lib/league";
 
 export default async function AwardsPage({ params }: { params: Promise<{ slug: string }> }) {
   const b = await getPublicBundle((await params).slug);
@@ -11,8 +11,7 @@ export default async function AwardsPage({ params }: { params: Promise<{ slug: s
   const { teams, matches, awards } = b;
   const teamMap = new Map(teams.map((x) => [x._id, x]));
   const byKey = new Map(awards.map((a) => [a.key, a]));
-  const table = standings(teams, matches, b.tournament.points);
-  const goals = scorers(matches);
+  const s = stats(teams, matches, b.tournament.points);
   const custom = awards.filter((a) => a.scope === "custom");
 
   return (
@@ -20,8 +19,8 @@ export default async function AwardsPage({ params }: { params: Promise<{ slug: s
       <section>
         <h2 className="h2">Tournament awards</h2>
         <div className="grid-cards">
-          {TOURNAMENT_SLOTS.map((s) => (
-            <AwardCard key={s.key} slot={s} award={byKey.get(s.key)} auto={autoWinner(s.key, table, goals, matches)} teams={teamMap} />
+          {TOURNAMENT_SLOTS.map((slot) => (
+            <AwardCard key={slot.key} slot={slot} award={byKey.get(slot.key)} auto={autoWinner(slot.key, s)} teams={teamMap} />
           ))}
         </div>
       </section>
@@ -44,10 +43,27 @@ export default async function AwardsPage({ params }: { params: Promise<{ slug: s
         </section>
       )}
 
-      <section>
-        <h2 className="h2">Full scoring chart</h2>
-        <ScorersTable rows={goals} teams={teams} />
-      </section>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="min-w-0">
+          <h2 className="h2">Golden Boot <small>Goals</small></h2>
+          <ScorersTable rows={s.goals} teams={teams} />
+        </section>
+        <section className="min-w-0">
+          <h2 className="h2">Playmaker <small>Assists</small></h2>
+          <AssistsTable rows={s.assists} teams={teams} />
+        </section>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="min-w-0">
+          <h2 className="h2">Fair play <small>Team cards</small></h2>
+          <FairPlayTable rows={s.cards.teams} teams={teams} />
+        </section>
+        <section className="min-w-0">
+          <h2 className="h2">Discipline <small>Cards by player</small></h2>
+          <CardsTable rows={s.cards.players} teams={teams} />
+        </section>
+      </div>
     </>
   );
 }

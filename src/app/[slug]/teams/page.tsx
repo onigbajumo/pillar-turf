@@ -3,13 +3,14 @@ import { Crest } from "@/components/Crest";
 import { Media } from "@/components/Media";
 import { getPublicBundle } from "@/lib/data";
 import { ordinal } from "@/lib/format";
-import { scorers, standings } from "@/lib/league";
+import { assisters, scorers, standings } from "@/lib/league";
 
 export default async function TeamsPage({ params }: { params: Promise<{ slug: string }> }) {
   const b = await getPublicBundle((await params).slug);
   if (!b) notFound();
   const rows = standings(b.teams, b.matches, b.tournament.points);
   const goals = scorers(b.matches);
+  const assists = assisters(b.matches);
   const anyPlayed = rows.some((r) => r.p);
 
   return (
@@ -18,7 +19,7 @@ export default async function TeamsPage({ params }: { params: Promise<{ slug: st
       {rows.length === 0 && <div className="card empty">No teams yet.</div>}
       <div className="grid-cards">
         {rows.map((r, i) => {
-          const t = r.team, top = goals.find((g) => g.team === t._id);
+          const t = r.team, top = goals.find((g) => g.team === t._id), maker = assists.find((a) => a.team === t._id);
           return (
             <article key={t._id} className="board flex flex-col">
               <div className="photo">
@@ -33,6 +34,7 @@ export default async function TeamsPage({ params }: { params: Promise<{ slug: st
                 </div>
                 <div className="tnum font-num text-[15px] text-[var(--muted)]">P{r.p} · W{r.w} D{r.d} L{r.l} · GF {r.gf} GA {r.ga}</div>
                 {top && <div className="hint">Top scorer: <b>{top.name}</b> ({top.goals})</div>}
+                {maker && <div className="hint">Top playmaker: <b>{maker.name}</b> ({maker.assists})</div>}
                 {t.squad.length ? (
                   <ul className="squad">{t.squad.map((p) => <li key={p}>{p}</li>)}</ul>
                 ) : <p className="hint">Squad list not added yet.</p>}

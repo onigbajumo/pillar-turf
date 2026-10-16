@@ -2,9 +2,10 @@ import "server-only";
 import mongoose from "mongoose";
 import { cache } from "react";
 import { connectDB } from "./db";
-import { Award, Match, Team, Tournament } from "./models";
+import { Award, Match, Setting, Team, Tournament } from "./models";
 import { plain } from "./api";
 import type { AwardT, MatchT, TeamT, TournamentT } from "./league";
+import { DEFAULT_SITE, type SiteInfo } from "./site";
 
 export type Bundle = { tournament: TournamentT; teams: TeamT[]; matches: MatchT[]; awards: AwardT[] };
 
@@ -39,9 +40,17 @@ async function bundleFor(filter: Record<string, unknown>): Promise<Bundle | null
     Match.find({ tournament: t._id }).sort({ round: 1, no: 1 }).lean(),
     Award.find({ tournament: t._id }).sort({ order: 1, createdAt: 1 }).lean(),
   ]);
-  return plain({ tournament: t, teams, matches, awards });
+  // matches saved before assists/cards existed have no such fields
+  const EMPTY = { homeAssists: [], awayAssists: [], homeYellows: [], awayYellows: [], homeReds: [], awayReds: [] };
+  return plain({ tournament: t, teams, matches: matches.map((m) => ({ ...EMPTY, ...m })), awards });
 }
 
 // cached per request so the tournament layout and page share one query
 export const getPublicBundle = cache((slug: string) => bundleFor({ slug, published: true }));
 export const getBundleById = (id: string) => (mongoose.isValidObjectId(id) ? bundleFor({ _id: id }) : Promise.resolve(null));
+
+export async function getSiteInfo(): Promise<SiteInfo> {
+  await connectDB();
+  const doc = await Setting.findOne({ key: "site" }).lean();
+  return { ...DEFAULT_SITE, ...((doc?.value as Partial<SiteInfo>) ?? {}) };
+}

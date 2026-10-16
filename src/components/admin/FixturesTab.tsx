@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/client";
 import type { Bundle } from "@/lib/data";
 import { fmtDate } from "@/lib/format";
-import { byOrder, goalsOf, parseScorers, roundDate, rounds, scorerText, type MatchT, type TeamT } from "@/lib/league";
+import { byOrder, countOf, goalsOf, parseScorers, parseTally, roundDate, rounds, scorerText, tallyText, type MatchT, type TeamT } from "@/lib/league";
 import { MatchRow } from "../MatchRow";
 import { ConfirmButton } from "./ConfirmButton";
 import { useRun } from "./hooks";
@@ -33,7 +33,7 @@ export function FixturesTab({ bundle }: { bundle: Bundle }) {
           );
         })}
       </div>
-      <p className="hint">Scorers: separate names with commas and put a number after anyone who scored more than once, e.g. <code>Tunde 2, Seyi</code>. Leave blank if you don&apos;t know who scored.</p>
+      <p className="hint">In goals, assists and cards, separate names with commas and put a number after anyone who did it more than once, e.g. <code>Tunde 2, Seyi</code>. Leave a box blank if you don&apos;t know.</p>
       <AddMatch bundle={bundle} defaultRound={lastRound} run={run} />
       <Schedule bundle={bundle} run={run} />
     </>
@@ -42,35 +42,84 @@ export function FixturesTab({ bundle }: { bundle: Bundle }) {
 
 type Run = ReturnType<typeof useRun>;
 
+const SIDES = ["home", "away"] as const;
+type Side = (typeof SIDES)[number];
+type EventField = "Scorers" | "Assists" | "Yellows" | "Reds";
+const EVENT_FIELDS: { key: EventField; label: string; mark: string; hint: string }[] = [
+  { key: "Scorers", label: "Goals", mark: "mk-goal", hint: "Tunde 2, Seyi" },
+  { key: "Assists", label: "Assists", mark: "mk-assist", hint: "Bayo" },
+  { key: "Yellows", label: "Yellow cards", mark: "mk-card y", hint: "Kola" },
+  { key: "Reds", label: "Red cards", mark: "mk-card r", hint: "" },
+];
+
 function MatchEditor({ m, teams, run }: { m: MatchT; teams: Map<string, TeamT>; run: Run }) {
   const [hs, setHs] = useState(m.played ? String(m.homeScore) : "");
   const [as, setAs] = useState(m.played ? String(m.awayScore) : "");
-  const [hsc, setHsc] = useState(scorerText(m.homeScorers));
-  const [asc, setAsc] = useState(scorerText(m.awayScorers));
+  const [ev, setEv] = useState<Record<`${Side}${EventField}`, string>>({
+    homeScorers: scorerText(m.homeScorers), awayScorers: scorerText(m.awayScorers),
+    homeAssists: tallyText(m.homeAssists), awayAssists: tallyText(m.awayAssists),
+    homeYellows: tallyText(m.homeYellows), awayYellows: tallyText(m.awayYellows),
+    homeReds: tallyText(m.homeReds), awayReds: tallyText(m.awayReds),
+  });
+  const [open, setOpen] = useState(false);
   const [more, setMore] = useState(false);
   const [info, setInfo] = useState({ round: m.round, date: m.date, time: m.time });
-  const home = teams.get(m.home)?.name ?? "Home", away = teams.get(m.away)?.name ?? "Away";
+  const names = { home: teams.get(m.home)?.name ?? "Home", away: teams.get(m.away)?.name ?? "Away" };
   const patch = (body: unknown, msg: string) => run(() => api(`/api/admin/matches/${m._id}`, { method: "PATCH", body }), msg);
 
   function saveResult() {
     if (hs === "" || as === "") return toast.error("Enter both scores first.");
-    const homeScorers = parseScorers(hsc), awayScorers = parseScorers(asc);
-    if (goalsOf(homeScorers) > Number(hs) || goalsOf(awayScorers) > Number(as)) return toast.error("The scorers add up to more goals than the score.");
-    patch({ result: { homeScore: Number(hs), awayScore: Number(as), homeScorers, awayScorers } }, `Result saved: ${home} ${hs}–${as} ${away}.`);
+    const score = { home: Number(hs), away: Number(as) };
+    const r = {
+      homeScorers: parseScorers(ev.homeScorers), awayScorers: parseScorers(ev.awayScorers),
+      homeAssists: parseTally(ev.homeAssists), awayAssists: parseTally(ev.awayAssists),
+      homeYellows: parseTally(ev.homeYellows), awayYellows: parseTally(ev.awayYellows),
+      homeReds: parseTally(ev.homeReds), awayReds: parseTally(ev.awayReds),
+    };
+    for (const side of SIDES) {
+      if (goalsOf(r[`${side}Scorers`]) > score[side]) return toast.error(`${names[side]}'s scorers add up to more than ${score[side]} goal${score[side] === 1 ? "" : "s"}.`);
+      if (countOf(r[`${side}Assists`]) > score[side]) return toast.error(`${names[side]} has more assists than goals.`);
+    }
+    patch({ result: { homeScore: score.home, awayScore: score.away, ...r } }, `Result saved: ${names.home} ${hs}–${as} ${names.away}.`);
   }
+
+  const filled = Object.values(ev).filter(Boolean).length;
 
   return (
     <MatchRow m={m} teams={teams}>
       <div className="col-span-3 flex flex-wrap items-center justify-center gap-1.5 pt-1">
-        <input id={`hs-${m._id}`} className="input num" type="number" min={0} value={hs} onChange={(e) => setHs(e.target.value)} aria-label={`${home} goals`} />
+        <input id={`hs-${m._id}`} className="input num" type="number" min={0} value={hs} onChange={(e) => setHs(e.target.value)} aria-label={`${names.home} goals`} />
         <span>–</span>
-        <input id={`as-${m._id}`} className="input num" type="number" min={0} value={as} onChange={(e) => setAs(e.target.value)} aria-label={`${away} goals`} />
-        <input id={`hsc-${m._id}`} className="input min-w-0 flex-1 basis-36" value={hsc} onChange={(e) => setHsc(e.target.value)} placeholder={`${home} scorers`} aria-label={`${home} goalscorers`} />
-        <input id={`asc-${m._id}`} className="input min-w-0 flex-1 basis-36" value={asc} onChange={(e) => setAsc(e.target.value)} placeholder={`${away} scorers`} aria-label={`${away} goalscorers`} />
+        <input id={`as-${m._id}`} className="input num" type="number" min={0} value={as} onChange={(e) => setAs(e.target.value)} aria-label={`${names.away} goals`} />
+        <button className="btn sm" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+          {open ? "Hide match details" : `Scorers, assists & cards${filled ? ` (${filled})` : ""}`}
+        </button>
         <button className="btn primary sm" onClick={saveResult}>Save result</button>
         {m.played && <button className="btn sm" onClick={() => patch({ result: null }, "Marked as not played.")}>Mark unplayed</button>}
         <button className="btn sm" onClick={() => setMore((v) => !v)} aria-expanded={more}>{more ? "Close" : "Edit match"}</button>
       </div>
+      {open && (
+        <div className="col-span-3 grid gap-3 rounded-lg bg-[var(--surface-2)] p-3 sm:grid-cols-2">
+          {SIDES.map((side) => (
+            <fieldset key={side} className="grid min-w-0 content-start gap-2">
+              <legend className="mb-1 font-semibold">{names[side]}</legend>
+              {EVENT_FIELDS.map((f) => (
+                <label key={f.key} className="flex min-w-0 items-center gap-2">
+                  <span className={f.mark} aria-hidden="true">{f.key === "Assists" ? "A" : null}</span>
+                  <span className="w-[86px] flex-none text-[13px] text-[var(--muted)]">{f.label}</span>
+                  <input
+                    id={`${side}${f.key}-${m._id}`}
+                    className="input min-w-0 flex-1"
+                    value={ev[`${side}${f.key}`]}
+                    onChange={(e) => setEv({ ...ev, [`${side}${f.key}`]: e.target.value })}
+                    placeholder={f.hint ? `e.g. ${f.hint}` : ""}
+                  />
+                </label>
+              ))}
+            </fieldset>
+          ))}
+        </div>
+      )}
       {more && (
         <div className="col-span-3 flex flex-wrap items-end justify-center gap-2 border-t border-[var(--line)] pt-2">
           <label className="label">Matchday<input className="input num" type="number" min={1} value={info.round} onChange={(e) => setInfo({ ...info, round: Number(e.target.value) })} /></label>

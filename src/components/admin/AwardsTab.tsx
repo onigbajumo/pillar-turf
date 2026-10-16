@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { api, uploadMedia } from "@/lib/client";
 import type { Bundle } from "@/lib/data";
 import { fmtDate } from "@/lib/format";
-import { TOURNAMENT_SLOTS, autoWinner, matchdaySlots, roundDate, rounds, scorers, standings, type AwardT, type Slot } from "@/lib/league";
+import { TOURNAMENT_SLOTS, autoWinner, matchdaySlots, roundDate, rounds, stats, type AwardT, type Slot } from "@/lib/league";
 import { AwardCard } from "../AwardCard";
 import { ConfirmButton } from "./ConfirmButton";
 import { useMe, useRun } from "./hooks";
@@ -16,8 +16,7 @@ export function AwardsTab({ bundle }: { bundle: Bundle }) {
   const [newTitle, setNewTitle] = useState("");
   const teamMap = new Map(teams.map((x) => [x._id, x]));
   const byKey = new Map(awards.map((a) => [a.key, a]));
-  const table = standings(teams, matches, t.points);
-  const goals = scorers(matches);
+  const st = stats(teams, matches, t.points);
   const custom = awards.filter((a) => a.scope === "custom");
 
   const card = (slot: Slot, auto: ReturnType<typeof autoWinner> = null) => {
@@ -47,8 +46,8 @@ export function AwardsTab({ bundle }: { bundle: Bundle }) {
   return (
     <>
       <section>
-        <h2 className="h2">Tournament awards <small>Champions and Golden Boot follow the table until you announce a winner</small></h2>
-        <div className="grid-cards">{TOURNAMENT_SLOTS.map((s) => card(s, autoWinner(s.key, table, goals, matches)))}</div>
+        <h2 className="h2">Tournament awards <small>Champions, Golden Boot, Playmaker and Fair Play follow the stats until you announce a winner</small></h2>
+        <div className="grid-cards">{TOURNAMENT_SLOTS.map((s) => card(s, autoWinner(s.key, st)))}</div>
       </section>
       {rounds(matches).map((r) => (
         <section key={r}>

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { handler, oid, ok } from "@/lib/api";
 import { HttpError, requireAdmin } from "@/lib/auth";
-import { goalsOf } from "@/lib/league";
+import { countOf, goalsOf } from "@/lib/league";
 import { Match } from "@/lib/models";
 import { matchUpdateSchema } from "@/lib/validators";
 
@@ -15,10 +15,15 @@ export const PATCH = handler(async (req: NextRequest, { params }: Ctx) => {
   const { result, ...rest } = body;
   Object.assign(m, rest);
   if (result === null) {
-    m.set({ played: false, homeScore: null, awayScore: null, homeScorers: [], awayScorers: [] });
+    m.set({
+      played: false, homeScore: null, awayScore: null, homeScorers: [], awayScorers: [],
+      homeAssists: [], awayAssists: [], homeYellows: [], awayYellows: [], homeReds: [], awayReds: [],
+    });
   } else if (result) {
     if (goalsOf(result.homeScorers) > result.homeScore || goalsOf(result.awayScorers) > result.awayScore)
       throw new HttpError(400, "The scorers add up to more goals than the score.");
+    if (countOf(result.homeAssists) > result.homeScore || countOf(result.awayAssists) > result.awayScore)
+      throw new HttpError(400, "There are more assists than goals for one of the teams.");
     m.set({ played: true, ...result });
   }
   await m.save();

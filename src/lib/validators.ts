@@ -5,6 +5,8 @@ const media = z
   .nullable();
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Pick a team colour.");
 const scorer = z.object({ name: z.string().trim().min(1).max(60), goals: z.number().int().min(1).max(50) });
+const tally = z.object({ name: z.string().trim().min(1).max(60), count: z.number().int().min(1).max(50) });
+const tallies = z.array(tally).max(30).default([]);
 
 export const loginSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
@@ -70,7 +72,13 @@ export const matchUpdateSchema = z.object({
   date: z.string().regex(/^(\d{4}-\d{2}-\d{2})?$/).optional(),
   time: z.string().trim().max(40).optional(),
   result: z
-    .object({ homeScore: z.number().int().min(0).max(99), awayScore: z.number().int().min(0).max(99), homeScorers: z.array(scorer), awayScorers: z.array(scorer) })
+    .object({
+      homeScore: z.number().int().min(0).max(99), awayScore: z.number().int().min(0).max(99),
+      homeScorers: z.array(scorer), awayScorers: z.array(scorer),
+      homeAssists: tallies, awayAssists: tallies,
+      homeYellows: tallies, awayYellows: tallies,
+      homeReds: tallies, awayReds: tallies,
+    })
     .nullable()
     .optional(), // null = mark unplayed
 });
@@ -86,4 +94,15 @@ export const awardUpsertSchema = z.object({
   team: z.string().nullable().default(null),
   note: z.string().trim().max(240).default(""),
   media: media.default(null),
+});
+
+const line = (max: number) => z.string().trim().max(max);
+export const siteSchema = z.object({
+  sessions: z.array(z.object({ day: line(30).min(1, "Each session needs a day."), time: line(40), deadline: line(20) })).max(14),
+  lateRule: line(400),
+  rules: z.array(line(400).min(1)).max(40),
+  pricePerPlayer: line(40),
+  subscription: line(200),
+  payment: z.object({ accountNumber: line(30), bank: line(60), accountName: line(80) }),
+  closing: line(200),
 });
