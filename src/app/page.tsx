@@ -55,9 +55,6 @@ export default async function Home() {
             </div>
           </section>
         ))}
-        <p className="hint">
-          Organiser? <Link href="/admin" className="underline">Log in to manage tournaments</Link>
-        </p>
       </main>
     </>
   );

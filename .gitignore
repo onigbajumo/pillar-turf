@@ -9,3 +9,6 @@ out
 next-env.d.ts
 npm-debug.log*
 .DS_Store
+.dev.log
+.mongo.log
+.claude

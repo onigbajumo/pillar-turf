@@ -1,6 +1,6 @@
 // Runs a local MongoDB on 127.0.0.1:27017 for development (data kept in ./.mongo-data).
 // Use this when you don't have MongoDB installed or an Atlas cluster yet. Stop with Ctrl+C.
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryServer } from "mongodb-memory-server-core"; // core: no binary download during npm install (keeps Vercel builds fast)
 import { mkdirSync } from "node:fs";
 
 const dbPath = new URL("../.mongo-data", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
